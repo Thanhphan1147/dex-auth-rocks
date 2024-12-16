@@ -1,0 +1,43 @@
+From f2579d5fa5ba18e2654d1eae1ff319f8d34afdf2 Mon Sep 17 00:00:00 2001
+From: Phan Trung Thanh <trung.thanh.phan@canonical.com>
+Date: Thu, 5 Dec 2024 17:47:08 +0100
+Subject: [PATCH] send redirect request instead of POST binding
+
+---
+ server/handlers.go | 20 ++------------------
+ 1 file changed, 2 insertions(+), 18 deletions(-)
+
+diff --git a/server/handlers.go b/server/handlers.go
+index 5954820c..0560f230 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -287,24 +287,8 @@ func (s *Server) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+ 				s.renderError(r, w, http.StatusInternalServerError, "Connector Login Error")
+ 				return
+ 			}
+-
+-			// TODO(ericchiang): Don't inline this.
+-			fmt.Fprintf(w, `<!DOCTYPE html>
+-			  <html lang="en">
+-			  <head>
+-			    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+-			    <title>SAML login</title>
+-			  </head>
+-			  <body>
+-			    <form method="post" action="%s" >
+-				    <input type="hidden" name="SAMLRequest" value="%s" />
+-				    <input type="hidden" name="RelayState" value="%s" />
+-			    </form>
+-				<script>
+-				    document.forms[0].submit();
+-				</script>
+-			  </body>
+-			  </html>`, action, value, authReq.ID)
++			escaped_saml_request := url.QueryEscape(value)
++			http.Redirect(w, r, action+"/saml?SAMLRequest="+escaped_saml_request+"&RelayState="+authReq.ID, http.StatusFound)
+ 		default:
+ 			s.renderError(r, w, http.StatusBadRequest, "Requested resource does not exist.")
+ 		}
+-- 
+2.43.0
+

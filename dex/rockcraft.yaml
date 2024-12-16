@@ -22,7 +22,16 @@ parts:
       mkdir -p ${CRAFT_PART_INSTALL}/usr/share/rocks
       (echo "# os-release" && cat /etc/os-release && echo "# dpkg-query" && dpkg-query -f '${db:Status-Abbrev},${binary:Package},${Version},${source:Package},${Source:Version}\n' -W) > ${CRAFT_PART_INSTALL}/usr/share/rocks/dpkg.query
 
+  patch:
+    plugin: nil
+    source: patch
+    override-build: |
+      mkdir -p /git
+      cp $CRAFT_PART_SRC/u1_sso.patch /git/patch
+
   builder:
+    after:
+      - patch
     plugin: go
     source: https://github.com/dexidp/dex.git
     source-tag: v2.39.1
@@ -36,6 +45,7 @@ parts:
     build-packages:
       - ca-certificates 
       - openssl
+      - git
     override-build: |-
       # Note: upstream dockerfile uses /user/local/src/dex as workdir, but
       #       in rockcraft that dir is shared by all parts.  Instead, use
@@ -54,6 +64,8 @@ parts:
       # Now pull in all source
       cp -r $CRAFT_PART_SRC/* .
 
+      # Apply patch for U1 SSO compatibility
+      git am < /git/patch
       make release-binary
 
       # Staging directives below are from the bottom of the upstream dockerfile
